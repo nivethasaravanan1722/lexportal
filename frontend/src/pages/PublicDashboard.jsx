@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const BACKEND_URL = 'https://lexportal.onrender.com';
+
 function PublicDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
@@ -10,6 +12,11 @@ function PublicDashboard() {
   const [caseSearch, setCaseSearch] = useState('');
   const [cases, setCases] = useState([]);
   const [casesLoading, setCasesLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'assistant', content: 'Hello! I am LexBot, your Indian legal assistant. Ask me anything about Indian law, your rights, or legal procedures!' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
   const features = [
     { id: 'search', icon: '🔍', title: 'Search Laws', desc: 'Search Indian laws & legal sections' },
@@ -36,7 +43,7 @@ function PublicDashboard() {
   const searchLaws = async () => {
     setLawsLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/laws?search=${searchQuery}`);
+      const res = await fetch(`${BACKEND_URL}/api/laws?search=${searchQuery}`);
       const data = await res.json();
       setLaws(data);
     } catch (err) {
@@ -48,7 +55,7 @@ function PublicDashboard() {
   const searchCases = async () => {
     setCasesLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/cases?search=${caseSearch}`);
+      const res = await fetch(`${BACKEND_URL}/api/cases?search=${caseSearch}`);
       const data = await res.json();
       setCases(data);
     } catch (err) {
@@ -57,37 +64,27 @@ function PublicDashboard() {
     setCasesLoading(false);
   };
 
-  const [chatMessages, setChatMessages] = useState([
-  { role: 'assistant', content: 'Hello! I am LexBot, your Indian legal assistant. Ask me anything about Indian law, your rights, or legal procedures!' }
-]);
-const [chatInput, setChatInput] = useState('');
-const [chatLoading, setChatLoading] = useState(false);
+  const sendMessage = async () => {
+    if (!chatInput.trim()) return;
+    const userMessage = { role: 'user', content: chatInput };
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setChatLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/chatbot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: chatInput })
+      });
+      const data = await res.json();
+      setChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }]);
+    }
+    setChatLoading(false);
+  };
 
-const sendMessage = async () => {
-  if (!chatInput.trim()) return;
-
-  const userMessage = { role: 'user', content: chatInput };
-  setChatMessages(prev => [...prev, userMessage]);
-  setChatInput('');
-  setChatLoading(true);
-
-  try {
-    const res = await fetch('http://localhost:5000/api/chatbot', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: chatInput })
-    });
-    const data = await res.json();
-    setChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-  } catch (err) {
-    setChatMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }]);
-  }
-  setChatLoading(false);
-};
-
-const user = JSON.parse(localStorage.getItem('user') || '{}');
-
-  
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -163,10 +160,7 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
                 placeholder="Search by IPC section, keyword, or topic..."
                 className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
-              <button
-                onClick={searchLaws}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
-              >
+              <button onClick={searchLaws} className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold">
                 Search
               </button>
             </div>
@@ -244,10 +238,7 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
                   placeholder="Enter Case Number (e.g. CRI/2024/001)"
                   className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
-                <button
-                  onClick={searchCases}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
-                >
+                <button onClick={searchCases} className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold">
                   Track
                 </button>
               </div>
@@ -279,52 +270,51 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
           </div>
         )}
 
-       {/* CHATBOT TAB */}
-{activeTab === 'chatbot' && (
-  <div>
-    <h2 className="text-2xl font-bold text-gray-800 mb-4">🤖 Legal FAQ Chatbot</h2>
-    <div className="bg-white rounded-xl shadow p-6">
-      <div className="bg-gray-50 rounded-xl p-4 h-96 overflow-y-auto mb-4 space-y-3" id="chat-box">
-        {chatMessages.map((msg, i) => (
-          <div key={i} className={`flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-            <div className={`rounded-full w-8 h-8 flex items-center justify-center text-sm flex-shrink-0 ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}>
-              {msg.role === 'user' ? '👤' : '⚖️'}
-            </div>
-            <div className={`rounded-xl px-4 py-2 text-sm max-w-md ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-gray-700'}`}>
-              {msg.content}
-            </div>
-          </div>
-        ))}
-        {chatLoading && (
-          <div className="flex items-start space-x-3">
-            <div className="bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center text-sm">⚖️</div>
-            <div className="bg-blue-50 rounded-xl px-4 py-2 text-sm text-gray-500">
-              Thinking...
+        {/* CHATBOT TAB */}
+        {activeTab === 'chatbot' && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">🤖 Legal FAQ Chatbot</h2>
+            <div className="bg-white rounded-xl shadow p-6">
+              <div className="bg-gray-50 rounded-xl p-4 h-96 overflow-y-auto mb-4 space-y-3">
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                    <div className={`rounded-full w-8 h-8 flex items-center justify-center text-sm flex-shrink-0 ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                      {msg.role === 'user' ? '👤' : '⚖️'}
+                    </div>
+                    <div className={`rounded-xl px-4 py-2 text-sm max-w-md ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-gray-700'}`}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center text-sm">⚖️</div>
+                    <div className="bg-blue-50 rounded-xl px-4 py-2 text-sm text-gray-500">Thinking...</div>
+                  </div>
+                )}
+              </div>
+              <div className="flex space-x-3">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                  placeholder="Ask a legal question..."
+                  className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={chatLoading}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold disabled:opacity-50"
+                >
+                  Send
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">⚠️ This chatbot provides general legal information, not legal advice.</p>
             </div>
           </div>
         )}
-      </div>
-      <div className="flex space-x-3">
-        <input
-          type="text"
-          value={chatInput}
-          onChange={e => setChatInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && sendMessage()}
-          placeholder="Ask a legal question..."
-          className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <button
-          onClick={sendMessage}
-          disabled={chatLoading}
-          className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold disabled:opacity-50"
-        >
-          Send
-        </button>
-      </div>
-      <p className="text-xs text-gray-400 mt-2">⚠️ This chatbot provides general legal information, not legal advice.</p>
-    </div>
-  </div>
-)}
+
         {/* LEGAL AID TAB */}
         {activeTab === 'aid' && (
           <div>
@@ -336,9 +326,7 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
                   placeholder="Enter your city or pincode..."
                   className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
-                <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold">
-                  Find
-                </button>
+                <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold">Find</button>
               </div>
             </div>
             <div className="space-y-4">
