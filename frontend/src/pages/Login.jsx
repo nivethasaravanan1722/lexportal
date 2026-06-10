@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-const BACKEND_URL = 'https://lexportal.onrender.com';
 
 function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
