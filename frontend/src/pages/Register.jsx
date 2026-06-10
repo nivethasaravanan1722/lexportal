@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
+// eslint-disable-next-line
 const BACKEND_URL = 'https://lexportal.onrender.com';
 
 function Register() {
