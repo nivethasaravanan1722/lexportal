@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
+const BACKEND_URL = 'https://lexportal.onrender.com';
 
 function Register() {
   const [form, setForm] = useState({
@@ -28,7 +29,7 @@ function Register() {
     setLoading(true);
 
     try {
-      const response = await fetch('https://lexportal.onrender.com/api/auth/register', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
